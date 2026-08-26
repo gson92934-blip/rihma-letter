@@ -72,7 +72,7 @@
 <body>
 
   <div class="box" id="loginPage">
-    <h1>💌 Letter</h1>
+    <h1>Letter</h1>
 
     <input type="text" id="name" placeholder="Name">
     <input type="password" id="password" placeholder="Password">
@@ -83,7 +83,7 @@
   </div>
 
   <div class="box" id="letterPage">
-    <h1>💌 Letter</h1>
+    <h1>Letter</h1>
 
     <textarea id="letterText" placeholder="Write your letter here..."></textarea>
 
@@ -92,68 +92,134 @@
     <div id="savedLetters"></div>
   </div>
 
-  <script>
+  <script type="module">
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      getDocs,
+      query,
+      orderBy
+    } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBBkfLCgb8eVtFyEBfsnnQcsCpuesaAF4k",
+      authDomain: "rihma-letter.firebaseapp.com",
+      projectId: "rihma-letter",
+      storageBucket: "rihma-letter.firebasestorage.app",
+      messagingSenderId: "615157104479",
+      appId: "1:615157104479:web:cd4dd4789f160900d3c0ea",
+      measurementId: "G-ZF2WZXCNMM"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
     const correctName = "rihma letter";
     const correctPassword = "rihana";
 
     function enterLetter() {
-      const name = document.getElementById("name").value;
+      const name = document.getElementById("name").value.trim();
       const password = document.getElementById("password").value;
 
       if (name === correctName && password === correctPassword) {
+
         document.getElementById("loginPage").style.display = "none";
         document.getElementById("letterPage").style.display = "block";
+
         showLetters();
+
       } else {
         document.getElementById("error").innerText =
           "Wrong name or password";
       }
     }
 
-    function saveLetter() {
+    window.enterLetter = enterLetter;
+
+    async function saveLetter() {
       const text = document.getElementById("letterText").value.trim();
 
       if (!text) {
-        alert("Please write a letter first ❤️");
+        alert("Please write a letter first");
         return;
       }
 
-      let letters = JSON.parse(localStorage.getItem("letters") || "[]");
+      try {
 
-      letters.push({
-        text: text,
-        date: new Date().toLocaleString()
-      });
+        await addDoc(collection(db, "letters"), {
+          text: text,
+          date: new Date().toLocaleString()
+        });
 
-      localStorage.setItem("letters", JSON.stringify(letters));
+        document.getElementById("letterText").value = "";
 
-      document.getElementById("letterText").value = "";
-      showLetters();
+        showLetters();
+
+      } catch (error) {
+        console.error(error);
+        alert("Letter save aagala. Please try again.");
+      }
     }
 
-    function showLetters() {
+    window.saveLetter = saveLetter;
+
+    async function showLetters() {
+
       const container = document.getElementById("savedLetters");
-      const letters = JSON.parse(localStorage.getItem("letters") || "[]");
 
-      container.innerHTML = "";
+      container.innerHTML = "Loading letters...";
 
-      letters.forEach((letter, index) => {
-        container.innerHTML += `
-          <div class="saved">
-            <b>Letter ${index + 1}</b><br>
-            <small>${letter.date}</small>
-            <br><br>
-            ${escapeHtml(letter.text)}
-          </div>
-        `;
-      });
+      try {
+
+        const q = query(
+          collection(db, "letters"),
+          orderBy("date")
+        );
+
+        const snapshot = await getDocs(q);
+
+        container.innerHTML = "";
+
+        let index = 1;
+
+        snapshot.forEach((doc) => {
+
+          const letter = doc.data();
+
+          container.innerHTML += `
+            <div class="saved">
+              <b>Letter ${index}</b><br>
+              <small>${escapeHtml(letter.date || "")}</small>
+              <br><br>
+              ${escapeHtml(letter.text || "")}
+            </div>
+          `;
+
+          index++;
+
+        });
+
+      } catch (error) {
+
+        console.error(error);
+
+        container.innerHTML =
+          "<p class='error'>Letters load aagala.</p>";
+      }
     }
 
     function escapeHtml(text) {
+
       const div = document.createElement("div");
+
       div.textContent = text;
+
       return div.innerHTML;
     }
+
   </script>
 
 </body>
